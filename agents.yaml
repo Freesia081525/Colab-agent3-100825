@@ -1,0 +1,432 @@
+agents:
+  - name: Device Count by Brand
+    description: Show total device counts grouped by brand
+    visualization:
+      type: bar
+      x: BrandName
+      y: DeviceCount
+      aggregate: sum
+
+  - name: Device Status Distribution
+    description: Pie chart of device status categories
+    visualization:
+      type: pie
+      x: DeviceStatus
+
+  - name: Distribution by Company
+    description: Show how many devices each company has registered
+    visualization:
+      type: bar
+      x: CompanyName
+      y: DeviceCount
+      aggregate: sum
+
+  - name: Commercial Distribution Status
+    description: Pie chart of commercial distribution statuses
+    visualization:
+      type: pie
+      x: CommercialDistributionStatus
+
+  - name: Devices per Version Model
+    description: Count devices grouped by version model number
+    visualization:
+      type: bar
+      x: VersionModelNumber
+      y: DeviceCount
+      aggregate: sum
+
+  - name: DeviceID Histogram
+    description: Histogram of Device IDs (numeric distribution)
+    visualization:
+      type: hist
+      x: DeviceID
+
+  - name: Brand vs DeviceID Scatter
+    description: Scatter plot of DeviceID vs DeviceCount by brand
+    visualization:
+      type: scatter
+      x: DeviceID
+      y: DeviceCount
+      hue: BrandName
+
+  - name: Company vs DeviceID Scatter
+    description: Scatter plot of DeviceID vs DeviceCount by company
+    visualization:
+      type: scatter
+      x: DeviceID
+      y: DeviceCount
+      hue: CompanyName
+
+  - name: Device Count by Status
+    description: Bar chart of device counts grouped by status
+    visualization:
+      type: bar
+      x: DeviceStatus
+      y: DeviceCount
+      aggregate: sum
+
+  - name: Device Count by Distribution Status
+    description: Bar chart of device counts grouped by distribution status
+    visualization:
+      type: bar
+      x: CommercialDistributionStatus
+      y: DeviceCount
+      aggregate: sum
+
+  - name: Brand vs Status
+    description: Bar chart of brands grouped by device status
+    visualization:
+      type: bar
+      x: BrandName
+      y: DeviceCount
+      hue: DeviceStatus
+      aggregate: sum
+
+  - name: Company vs Status
+    description: Bar chart of companies grouped by device status
+    visualization:
+      type: bar
+      x: CompanyName
+      y: DeviceCount
+      hue: DeviceStatus
+      aggregate: sum
+
+  - name: Brand vs Distribution
+    description: Bar chart of brands grouped by distribution status
+    visualization:
+      type: bar
+      x: BrandName
+      y: DeviceCount
+      hue: CommercialDistributionStatus
+      aggregate: sum
+
+  - name: Company vs Distribution
+    description: Bar chart of companies grouped by distribution status
+    visualization:
+      type: bar
+      x: CompanyName
+      y: DeviceCount
+      hue: CommercialDistributionStatus
+      aggregate: sum
+
+  - name: Device Count Histogram
+    description: Histogram of device counts
+    visualization:
+      type: hist
+      x: DeviceCount
+
+  - name: Brand Frequency
+    description: Pie chart of brand frequency
+    visualization:
+      type: pie
+      x: BrandName
+
+  - name: Company Frequency
+    description: Pie chart of company frequency
+    visualization:
+      type: pie
+      x: CompanyName
+
+  - name: Version Model Frequency
+    description: Pie chart of version model frequency
+    visualization:
+      type: pie
+      x: VersionModelNumber
+
+  - name: DeviceID vs Version Scatter
+    description: Scatter plot of DeviceID vs VersionModelNumber
+    visualization:
+      type: scatter
+      x: DeviceID
+      y: VersionModelNumber
+
+  - name: DeviceID vs Brand Scatter
+    description: Scatter plot of DeviceID vs BrandName
+    visualization:
+      type: scatter
+      x: DeviceID
+      y: BrandName
+
+  - name: DeviceID vs Company Scatter
+    description: Scatter plot of DeviceID vs CompanyName
+    visualization:
+      type: scatter
+      x: DeviceID
+      y: CompanyName
+
+  - name: Device Count by Brand Histogram
+    description: Histogram of device counts grouped by brand
+    visualization:
+      type: hist
+      x: BrandName
+
+  - name: Device Count by Company Histogram
+    description: Histogram of device counts grouped by company
+    visualization:
+      type: hist
+      x: CompanyName
+
+  - name: Device Count by Status Histogram
+    description: Histogram of device counts grouped by status
+    visualization:
+      type: hist
+      x: DeviceStatus
+
+  - name: Device Count by Distribution Histogram
+    description: Histogram of device counts grouped by distribution status
+    visualization:
+      type: hist
+      x: CommercialDistributionStatus
+
+  - name: Brand vs Company
+    description: Scatter plot of brand vs company
+    visualization:
+      type: scatter
+      x: BrandName
+      y: CompanyName
+
+  - name: Brand vs Version
+    description: Scatter plot of brand vs version model
+    visualization:
+      type: scatter
+      x: BrandName
+      y: VersionModelNumber
+
+  - name: Company vs Version
+    description: Scatter plot of company vs version model
+    visualization:
+      type: scatter
+      x: CompanyName
+      y: VersionModelNumber
+
+  - name: Status vs Distribution
+    description: Bar chart of device status vs distribution status
+    visualization:
+      type: bar
+      x: DeviceStatus
+      y: DeviceCount
+      hue: CommercialDistributionStatus
+      aggregate: sum
+
+  - name: Brand vs DeviceID Histogram
+    description: Histogram of DeviceIDs grouped by brand
+    visualization:
+      type: hist
+      x: DeviceID
+      hue: BrandName
+  - name: 各品牌裝置數量
+    description: 顯示依品牌分組的裝置總數
+    visualization:
+      type: bar
+      x: BrandName
+      y: DeviceCount
+      aggregate: sum
+
+  - name: 裝置狀態分佈
+    description: 裝置狀態類別的圓餅圖
+    visualization:
+      type: pie
+      x: DeviceStatus
+
+  - name: 各公司裝置數量
+    description: 顯示每家公司註冊的裝置數量
+    visualization:
+      type: bar
+      x: CompanyName
+      y: DeviceCount
+      aggregate: sum
+
+  - name: 商業流通狀態分佈
+    description: 商業流通狀態的圓餅圖
+    visualization:
+      type: pie
+      x: CommercialDistributionStatus
+
+  - name: 各版本型號裝置數量
+    description: 依版本型號分組的裝置數量
+    visualization:
+      type: bar
+      x: VersionModelNumber
+      y: DeviceCount
+      aggregate: sum
+
+  - name: 裝置ID直方圖
+    description: 裝置ID 的數值分佈直方圖
+    visualization:
+      type: hist
+      x: DeviceID
+
+  - name: 品牌與裝置ID散佈圖
+    description: 顯示裝置ID 與裝置數量的品牌散佈圖
+    visualization:
+      type: scatter
+      x: DeviceID
+      y: DeviceCount
+      hue: BrandName
+
+  - name: 公司與裝置ID散佈圖
+    description: 顯示裝置ID 與裝置數量的公司散佈圖
+    visualization:
+      type: scatter
+      x: DeviceID
+      y: DeviceCount
+      hue: CompanyName
+
+  - name: 各狀態裝置數量
+    description: 依裝置狀態分組的裝置數量長條圖
+    visualization:
+      type: bar
+      x: DeviceStatus
+      y: DeviceCount
+      aggregate: sum
+
+  - name: 各流通狀態裝置數量
+    description: 依流通狀態分組的裝置數量長條圖
+    visualization:
+      type: bar
+      x: CommercialDistributionStatus
+      y: DeviceCount
+      aggregate: sum
+
+  - name: 品牌與狀態
+    description: 依品牌與裝置狀態分組的長條圖
+    visualization:
+      type: bar
+      x: BrandName
+      y: DeviceCount
+      hue: DeviceStatus
+      aggregate: sum
+
+  - name: 公司與狀態
+    description: 依公司與裝置狀態分組的長條圖
+    visualization:
+      type: bar
+      x: CompanyName
+      y: DeviceCount
+      hue: DeviceStatus
+      aggregate: sum
+
+  - name: 品牌與流通狀態
+    description: 依品牌與流通狀態分組的長條圖
+    visualization:
+      type: bar
+      x: BrandName
+      y: DeviceCount
+      hue: CommercialDistributionStatus
+      aggregate: sum
+
+  - name: 公司與流通狀態
+    description: 依公司與流通狀態分組的長條圖
+    visualization:
+      type: bar
+      x: CompanyName
+      y: DeviceCount
+      hue: CommercialDistributionStatus
+      aggregate: sum
+
+  - name: 裝置數量直方圖
+    description: 裝置數量的直方圖
+    visualization:
+      type: hist
+      x: DeviceCount
+
+  - name: 品牌頻率
+    description: 品牌出現頻率的圓餅圖
+    visualization:
+      type: pie
+      x: BrandName
+
+  - name: 公司頻率
+    description: 公司出現頻率的圓餅圖
+    visualization:
+      type: pie
+      x: CompanyName
+
+  - name: 版本型號頻率
+    description: 版本型號出現頻率的圓餅圖
+    visualization:
+      type: pie
+      x: VersionModelNumber
+
+  - name: 裝置ID與版本散佈圖
+    description: 裝置ID 與版本型號的散佈圖
+    visualization:
+      type: scatter
+      x: DeviceID
+      y: VersionModelNumber
+
+  - name: 裝置ID與品牌散佈圖
+    description: 裝置ID 與品牌的散佈圖
+    visualization:
+      type: scatter
+      x: DeviceID
+      y: BrandName
+
+  - name: 裝置ID與公司散佈圖
+    description: 裝置ID 與公司的散佈圖
+    visualization:
+      type: scatter
+      x: DeviceID
+      y: CompanyName
+
+  - name: 各品牌裝置數量直方圖
+    description: 依品牌分組的裝置數量直方圖
+    visualization:
+      type: hist
+      x: BrandName
+
+  - name: 各公司裝置數量直方圖
+    description: 依公司分組的裝置數量直方圖
+    visualization:
+      type: hist
+      x: CompanyName
+
+  - name: 各狀態裝置數量直方圖
+    description: 依狀態分組的裝置數量直方圖
+    visualization:
+      type: hist
+      x: DeviceStatus
+
+  - name: 各流通狀態裝置數量直方圖
+    description: 依流通狀態分組的裝置數量直方圖
+    visualization:
+      type: hist
+      x: CommercialDistributionStatus
+
+  - name: 品牌與公司散佈圖
+    description: 品牌與公司的散佈圖
+    visualization:
+      type: scatter
+      x: BrandName
+      y: CompanyName
+
+  - name: 品牌與版本散佈圖
+    description: 品牌與版本型號的散佈圖
+    visualization:
+      type: scatter
+      x: BrandName
+      y: VersionModelNumber
+
+  - name: 公司與版本散佈圖
+    description: 公司與版本型號的散佈圖
+    visualization:
+      type: scatter
+      x: CompanyName
+      y: VersionModelNumber
+
+  - name: 狀態與流通狀態
+    description: 裝置狀態與流通狀態的長條圖
+    visualization:
+      type: bar
+      x: DeviceStatus
+      y: DeviceCount
+      hue: CommercialDistributionStatus
+      aggregate: sum
+
+  - name: 品牌與裝置ID直方圖
+    description: 依品牌分組的裝置ID直方圖
+    visualization:
+      type: hist
+      x: DeviceID
+      hue: BrandName
+
