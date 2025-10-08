@@ -1,7 +1,7 @@
 # ============================================================
 # 🧰 Setup: Install packages (Run this cell in Google Colab)
 # ============================================================
-!pip install -q pandas seaborn matplotlib pyyaml gradio google-generativeai
+#!pip install -q pandas seaborn matplotlib pyyaml gradio google-generativeai
 
 # ============================================================
 # 📚 Imports
