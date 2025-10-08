@@ -1,38 +1,135 @@
-# ============================================================
-# 🧰 Setup: Install packages (Run this cell in Google Colab)
-# ============================================================
-#!pip install -q pandas seaborn matplotlib pyyaml gradio google-generativeai
-
-# ============================================================
-# 📚 Imports
-# ============================================================
 import io
 import json
+import os
+import yaml
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-import yaml
-import gradio as gr
-import google.generativeai as genai
+import streamlit as st
 
-# ============================================================
-# 🎨 Global style
-# ============================================================
-sns.set(style="whitegrid")
+# Optional Gemini integration
+USE_GEMINI_DEFAULT = True
+GEMINI_MODEL_NAME = "gemini-2.0-flash"
+
+# Try to import google.generativeai if available
+GENAI_AVAILABLE = False
+try:
+    import google.generativeai as genai
+    GENAI_AVAILABLE = True
+except Exception:
+    GENAI_AVAILABLE = False
+
+# ---------------------------------------
+# WOW Themes: palette + fonts + accents
+# ---------------------------------------
+THEMES = {
+    "UK Royal": {
+        "palette": ["#00247D", "#C8102E", "#FFD700", "#FFFFFF", "#000000"],
+        "font": "Georgia",
+        "accent": "#FFD700",
+        "bg": "#F2F4F8"
+    },
+    "Azure Coast": {
+        "palette": ["#007FFF", "#00BFFF", "#2E8B57", "#F0FFFF", "#0F3D57"],
+        "font": "Verdana",
+        "accent": "#00BFFF",
+        "bg": "#EEF7FF"
+    },
+    "Deep sea": {
+        "palette": ["#001F3F", "#003366", "#004C99", "#00A3E0", "#66D9EF"],
+        "font": "Trebuchet MS",
+        "accent": "#00A3E0",
+        "bg": "#0B1F2A"
+    },
+    "Ferrari sports car": {
+        "palette": ["#DC0000", "#FFEB00", "#1E1E1E", "#2C2C2C", "#FFFFFF"],
+        "font": "Helvetica",
+        "accent": "#DC0000",
+        "bg": "#1E1E1E"
+    },
+    "Norwaygean": {
+        "palette": ["#1B3A4B", "#EFEFEF", "#F2545B", "#C1DFF0", "#537780"],
+        "font": "Calibri",
+        "accent": "#F2545B",
+        "bg": "#F5FAFF"
+    },
+    "Mozart": {
+        "palette": ["#4A3F35", "#D4AF37", "#F5F5DC", "#6B4E3D", "#1C1C1C"],
+        "font": "Times New Roman",
+        "accent": "#D4AF37",
+        "bg": "#F9F6EE"
+    },
+    "J.S.Bach": {
+        "palette": ["#4B0082", "#DAA520", "#EFE6DD", "#2E2E3A", "#FFFFFF"],
+        "font": "Times New Roman",
+        "accent": "#DAA520",
+        "bg": "#F7F2EA"
+    },
+}
+
 CORAL = "#FF6F61"
 
-# ============================================================
-# 🧩 Helpers: Data loading and agents parsing
-# ============================================================
+# ---------------------------------------
+# Streamlit page config
+# ---------------------------------------
+st.set_page_config(page_title="Agent-based Visualization (Streamlit + HF Spaces)", layout="wide")
+
+# ---------------------------------------
+# Theme selector + CSS
+# ---------------------------------------
+with st.sidebar:
+    st.markdown("## Theme")
+    theme_name = st.selectbox("Select WOW theme", list(THEMES.keys()), index=0)
+theme = THEMES[theme_name]
+
+def inject_theme_css(theme):
+    palette = theme["palette"]
+    font = theme["font"]
+    accent = theme["accent"]
+    bg = theme["bg"]
+    st.markdown(
+        f"""
+        <style>
+        html, body, .stApp {{
+            background-color: {bg} !important;
+            font-family: '{font}', sans-serif;
+        }}
+        .wow-title {{
+            color: {palette[0]};
+            border-left: 8px solid {accent};
+            padding-left: 12px;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+        }}
+        .wow-sub {{
+            color: {palette[2]};
+            font-weight: 600;
+        }}
+        .wow-box {{
+            background: rgba(255,255,255,0.7);
+            border: 1px solid {accent};
+            border-radius: 10px;
+            padding: 12px 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }}
+        .wow-accent {{
+            color: {accent};
+            font-weight: 700;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+inject_theme_css(theme)
+
+# ---------------------------------------
+# Helpers: load dataset from csv/json
+# ---------------------------------------
 def detect_format_and_load(text_or_bytes, filename=None):
-    """
-    Load dataset from CSV or JSON (file or pasted text).
-    Returns: (df, msg)
-    """
     if text_or_bytes is None:
         return None, "No dataset provided."
 
-    # If it's a file-like object (bytes), try using filename hint
+    # File bytes
     if isinstance(text_or_bytes, bytes):
         if filename and filename.lower().endswith(".csv"):
             try:
@@ -41,7 +138,7 @@ def detect_format_and_load(text_or_bytes, filename=None):
             except Exception as e:
                 return None, f"Error reading CSV: {e}"
         else:
-            # Try JSON fallback
+            # Try JSON
             try:
                 obj = json.load(io.BytesIO(text_or_bytes))
                 df = pd.json_normalize(obj)
@@ -49,17 +146,17 @@ def detect_format_and_load(text_or_bytes, filename=None):
             except Exception as e:
                 return None, f"Error reading JSON: {e}"
 
-    # If it's pasted text (string)
+    # Pasted text
     if isinstance(text_or_bytes, str):
         txt = text_or_bytes.strip()
-        # Try JSON first
+        # JSON first
         try:
             obj = json.loads(txt)
             df = pd.json_normalize(obj)
             return df, "Loaded JSON from pasted text"
         except Exception:
             pass
-        # Try CSV
+        # CSV fallback
         try:
             df = pd.read_csv(io.StringIO(txt))
             return df, "Loaded CSV from pasted text"
@@ -68,21 +165,10 @@ def detect_format_and_load(text_or_bytes, filename=None):
 
     return None, "Unsupported dataset input format."
 
+# ---------------------------------------
+# Helpers: parse agents.yaml
+# ---------------------------------------
 def parse_agents_yaml(text_or_bytes):
-    """
-    Parse agents.yaml from file or pasted text.
-    Returns: (agents_list, msg)
-    Expected schema (flexible):
-    agents:
-      - name: ...
-        description: ...
-        visualization:
-          type: bar|pie|scatter|hist
-          x: column_name
-          y: column_name
-          hue: column_name
-          aggregate: sum|count|mean (optional)
-    """
     try:
         if isinstance(text_or_bytes, bytes):
             data = yaml.safe_load(io.StringIO(text_or_bytes.decode("utf-8")))
@@ -115,37 +201,30 @@ def parse_agents_yaml(text_or_bytes):
         })
     return cleaned, f"Parsed {len(cleaned)} agents."
 
-# ============================================================
-# 🤖 Gemini 2.0 Flash: Suggest visualization config
-# ============================================================
+# ---------------------------------------
+# Optional: Gemini suggest visualization
+# ---------------------------------------
 def suggest_viz_with_gemini(api_key, df, agent_context=""):
-    """
-    Use Gemini 2.0 Flash to suggest a visualization config based on DF columns and agent context.
-    Returns a dict like:
-      {"type":"bar","x":"BrandName","y":"DeviceCount","hue":null,"aggregate":"sum"}
-    """
-    if not api_key:
-        return None, "No API key provided for Gemini."
+    if not api_key or not GENAI_AVAILABLE:
+        return None, "Gemini unavailable or no API key."
     try:
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-2.0-flash")
+        model = genai.GenerativeModel(GEMINI_MODEL_NAME)
         cols = list(df.columns)
         sample = df.head(5).to_dict(orient="records")
         prompt = (
-            "You are a data visualization assistant. Given the dataframe columns and a brief agent description, "
-            "return a concise JSON with keys: type (bar|pie|scatter|hist), x, y, hue (optional), aggregate (sum|count|mean|none). "
-            "Prioritize categorical x with numeric y for bar; use pie for categorical distribution; scatter for two numeric columns; hist for single numeric.\n\n"
+            "You are a data visualization assistant. Given dataframe columns and a brief agent description, "
+            "return concise JSON with keys: type (bar|pie|scatter|hist), x, y, hue (optional), aggregate (sum|count|mean|none). "
+            "Prefer categorical x with numeric y for bar; pie for categorical distribution; scatter for two numeric columns; hist for single numeric.\n\n"
             f"Columns: {cols}\nSample rows: {json.dumps(sample)}\nAgent context: {agent_context}\n"
             "Return only the JSON (no commentary)."
         )
         resp = model.generate_content(prompt)
         text = resp.text.strip()
-        # Try to load JSON
         try:
             cfg = json.loads(text)
             return cfg, "Gemini suggested visualization."
         except Exception:
-            # Robust fallback: try to extract between braces
             start = text.find("{")
             end = text.rfind("}")
             if start != -1 and end != -1:
@@ -155,167 +234,141 @@ def suggest_viz_with_gemini(api_key, df, agent_context=""):
     except Exception as e:
         return None, f"Gemini error: {e}"
 
-# ============================================================
-# 📈 Visualization renderer
-# ============================================================
-def render_viz(df, viz_cfg):
-    """
-    Render a plot based on viz_cfg. Returns matplotlib figure.
-    viz_cfg: {"type":"bar|pie|scatter|hist","x":..., "y":..., "hue":..., "aggregate":...}
-    """
-    fig = plt.figure(figsize=(8,5))
+# ---------------------------------------
+# Visualization renderer (seaborn/mpl)
+# ---------------------------------------
+def render_viz(df, viz_cfg, palette_color=CORAL):
+    fig, ax = plt.subplots(figsize=(8, 5))
+    sns.set(style="whitegrid")
+
     vtype = (viz_cfg.get("type") or "").lower()
     x = viz_cfg.get("x")
     y = viz_cfg.get("y")
     hue = viz_cfg.get("hue")
     agg = (viz_cfg.get("aggregate") or "none").lower()
 
-    # Simple aggregation support
     plot_df = df.copy()
-    if agg in ["sum", "mean", "count"] and x and y and x in plot_df.columns and y in plot_df.columns:
-        if agg == "count":
-            plot_df = plot_df.groupby(x).size().reset_index(name="count")
-            y = "count"
-        else:
-            plot_df = plot_df.groupby(x)[y].agg(agg).reset_index()
-
-    # Fallback palette with coral
-    palette = sns.color_palette([CORAL])
-
     try:
+        if agg in ["sum", "mean", "count"] and x and y and x in plot_df.columns and (y in plot_df.columns or agg == "count"):
+            if agg == "count":
+                plot_df = plot_df.groupby(x).size().reset_index(name="count")
+                y = "count"
+            else:
+                plot_df = plot_df.groupby(x)[y].agg(agg).reset_index()
+
         if vtype == "bar" and x and y:
-            sns.barplot(data=plot_df, x=x, y=y, hue=hue, color=CORAL if not hue else None, palette=None if not hue else "Set2")
-            plt.title("Bar chart", fontsize=14)
+            if hue:
+                sns.barplot(data=plot_df, x=x, y=y, hue=hue)
+            else:
+                sns.barplot(data=plot_df, x=x, y=y, color=palette_color)
+            ax.set_title("Bar chart", fontsize=14)
             plt.xticks(rotation=45)
         elif vtype == "pie" and x:
             counts = plot_df[x].value_counts()
-            plt.pie(counts, labels=counts.index, autopct="%1.1f%%", colors=[CORAL, "#FFDAB9", "#FFC1A6", "#FFA07A"])
-            plt.title("Pie chart", fontsize=14)
+            ax.pie(counts, labels=counts.index, autopct="%1.1f%%",
+                   colors=[palette_color, "#FFDAB9", "#FFC1A6", "#FFA07A", "#B0E0E6", "#8FBC8F"])
+            ax.set_title("Pie chart", fontsize=14)
         elif vtype == "scatter" and x and y:
-            sns.scatterplot(data=plot_df, x=x, y=y, hue=hue, palette="Set2")
-            plt.title("Scatter plot", fontsize=14)
+            sns.scatterplot(data=plot_df, x=x, y=y, hue=hue)
+            ax.set_title("Scatter plot", fontsize=14)
         elif vtype == "hist" and x:
-            sns.histplot(data=plot_df, x=x, hue=hue, color=CORAL, bins=20)
-            plt.title("Histogram", fontsize=14)
+            sns.histplot(data=plot_df, x=x, hue=hue, color=palette_color, bins=20)
+            ax.set_title("Histogram", fontsize=14)
         else:
-            plt.text(0.1, 0.5, f"Invalid or insufficient config for visualization.\nType: {vtype}\nX: {x}\nY: {y}", fontsize=12)
+            ax.text(0.1, 0.5, f"Invalid or insufficient config.\nType: {vtype}\nX: {x}\nY: {y}", fontsize=12)
         plt.tight_layout()
         return fig
     except Exception as e:
-        fig = plt.figure(figsize=(8,3))
-        plt.text(0.1, 0.5, f"Visualization error: {e}", fontsize=12, color="red")
-        plt.axis("off")
+        fig, ax = plt.subplots(figsize=(8, 3))
+        ax.text(0.1, 0.5, f"Visualization error: {e}", fontsize=12, color="red")
+        ax.axis("off")
         return fig
 
-# ============================================================
-# 🖥️ Gradio UI: Upload/paste dataset & agents, select agent, visualize
-# ============================================================
-def run_pipeline(api_key, dataset_file, dataset_text, agents_file, agents_text, use_gemini):
-    """
-    Main function for Gradio.
-    """
-    # Load dataset
-    ds_bytes = dataset_file.read() if dataset_file else None
-    ds_name = dataset_file.name if dataset_file else None
-    df, ds_msg = detect_format_and_load(ds_bytes if ds_bytes else dataset_text, filename=ds_name)
+# ---------------------------------------
+# Layout
+# ---------------------------------------
+st.markdown(f"<h2 class='wow-title'>Agent-based Data Visualization</h2>", unsafe_allow_html=True)
+st.markdown(f"<div class='wow-sub'>Theme: <span class='wow-accent'>{theme_name}</span></div>", unsafe_allow_html=True)
 
-    # Load agents
-    ag_bytes = agents_file.read() if agents_file else None
-    agents, ag_msg = parse_agents_yaml(ag_bytes if ag_bytes else agents_text)
+with st.sidebar:
+    st.markdown("## Inputs")
+    gemini_api_key = st.text_input("Gemini API Key (optional)", value=os.environ.get("GOOGLE_API_KEY", ""), type="password")
+    use_gemini = st.checkbox("Use Gemini 2.0 Flash for suggestions", value=USE_GEMINI_DEFAULT)
 
-    status = []
-    status.append(f"Dataset: {ds_msg}")
-    status.append(f"Agents: {ag_msg}")
+col1, col2 = st.columns(2)
 
-    agent_names = [a["name"] for a in agents] if agents else []
-    return df, agents, "\n".join(status), gr.update(choices=agent_names, value=agent_names[0] if agent_names else None)
+with col1:
+    st.markdown("<div class='wow-box'><b>Dataset input</b></div>", unsafe_allow_html=True)
+    uploaded_dataset = st.file_uploader("Upload dataset (CSV or JSON)", type=["csv", "json"])
+    pasted_dataset = st.text_area("Or paste dataset (CSV or JSON)", height=180, placeholder="Paste CSV or JSON here")
 
-def visualize_selected(api_key, selected_agent_name, use_gemini, df_state, agents_state):
-    """
-    Visualize based on selected agent; optionally use Gemini to refine config.
-    """
-    if df_state is None or not isinstance(df_state, pd.DataFrame):
-        msg = "No dataset loaded."
-        fig = plt.figure(figsize=(8,3)); plt.text(0.1,0.5,msg); plt.axis("off")
-        return fig, msg
+with col2:
+    st.markdown("<div class='wow-box'><b>Agents YAML</b></div>", unsafe_allow_html=True)
+    uploaded_agents = st.file_uploader("Upload agents.yaml", type=["yaml", "yml"])
+    pasted_agents = st.text_area("Or paste agents.yaml", height=180, placeholder="Paste YAML with agents list")
 
-    if not agents_state:
-        msg = "No agents parsed."
-        fig = plt.figure(figsize=(8,3)); plt.text(0.1,0.5,msg); plt.axis("off")
-        return fig, msg
+# Load dataset
+df = None
+ds_msg = ""
+if uploaded_dataset is not None:
+    df, ds_msg = detect_format_and_load(uploaded_dataset.read(), filename=uploaded_dataset.name)
+elif pasted_dataset.strip():
+    df, ds_msg = detect_format_and_load(pasted_dataset)
 
-    # Find agent
-    agent = None
-    for a in agents_state:
-        if a["name"] == selected_agent_name:
-            agent = a
-            break
-    if agent is None:
-        msg = f"Selected agent not found: {selected_agent_name}"
-        fig = plt.figure(figsize=(8,3)); plt.text(0.1,0.5,msg); plt.axis("off")
-        return fig, msg
+# Load agents
+agents = []
+ag_msg = ""
+if uploaded_agents is not None:
+    agents, ag_msg = parse_agents_yaml(uploaded_agents.read())
+elif pasted_agents.strip():
+    agents, ag_msg = parse_agents_yaml(pasted_agents)
 
-    viz_cfg = agent.get("visualization") or {}
-    # If config is minimal or missing, ask Gemini for suggestion
-    gemini_msg = "Gemini not used."
-    if use_gemini:
-        suggested, gemini_msg = suggest_viz_with_gemini(api_key, df_state, agent_context=agent.get("description",""))
-        if suggested:
-            # Merge suggested into existing (agent overrides if present)
-            for k,v in suggested.items():
-                if viz_cfg.get(k) in [None, ""]:
-                    viz_cfg[k] = v
+st.markdown(f"<div class='wow-box'><b>Status</b><br>{ds_msg}<br>{ag_msg}</div>", unsafe_allow_html=True)
 
-    fig = render_viz(df_state, viz_cfg)
-    # Compose status
-    cfg_msg = json.dumps({k:v for k,v in viz_cfg.items()}, ensure_ascii=False)
-    status = (
-        f"Agent: {agent.get('name')}\n"
-        f"Description: {agent.get('description','')}\n"
-        f"Visualization config: {cfg_msg}\n"
-        f"{gemini_msg}"
-    )
-    return fig, status
+agent_names = [a["name"] for a in agents] if agents else []
+selected_agent = st.selectbox("Select agent", agent_names) if agent_names else None
 
-# ============================================================
-# 🚀 Launch Gradio App
-# ============================================================
-with gr.Blocks(title="Agent-based Visualization (Colab + Gemini)") as demo:
-    gr.Markdown("### Agent-based Data Visualization\nUpload or paste your dataset (JSON/CSV) and agents.yaml, then select an agent to visualize. Optional: use Gemini 2.0 Flash to auto-suggest visualization.")
-    with gr.Row():
-        api_key = gr.Textbox(label="Gemini API Key", placeholder="Enter your Gemini API key (optional if not using Gemini)", type="password")
-        use_gemini = gr.Checkbox(label="Use Gemini 2.0 Flash for suggestions", value=True)
+# Visualization
+if st.button("Visualize", type="primary"):
+    if df is None:
+        st.error("No dataset loaded.")
+    elif not agents:
+        st.error("No agents parsed.")
+    elif selected_agent is None:
+        st.error("Please select an agent.")
+    else:
+        agent = next((a for a in agents if a["name"] == selected_agent), None)
+        if agent is None:
+            st.error(f"Selected agent not found: {selected_agent}")
+        else:
+            viz_cfg = agent.get("visualization") or {}
+            gemini_msg = "Gemini not used."
+            if use_gemini:
+                suggested, gemini_msg = suggest_viz_with_gemini(gemini_api_key, df, agent_context=agent.get("description", ""))
+                if suggested:
+                    # fill missing keys only
+                    for k, v in suggested.items():
+                        if viz_cfg.get(k) in [None, "", []]:
+                            viz_cfg[k] = v
 
-    with gr.Tab("Dataset"):
-        dataset_file = gr.File(label="Upload dataset (CSV or JSON)")
-        dataset_text = gr.Textbox(label="Or paste dataset (CSV or JSON)", lines=10, placeholder="Paste CSV or JSON here")
+            # pick a palette color from theme
+            palette_color = theme["palette"][0] if theme["palette"] else CORAL
+            fig = render_viz(df, viz_cfg, palette_color=palette_color)
+            st.pyplot(fig)
 
-    with gr.Tab("Agents YAML"):
-        agents_file = gr.File(label="Upload agents.yaml")
-        agents_text = gr.Textbox(label="Or paste agents.yaml", lines=12, placeholder="Paste YAML with agents list")
+            st.markdown("<div class='wow-box'><b>Details</b></div>", unsafe_allow_html=True)
+            st.code(json.dumps({
+                "agent": agent.get("name"),
+                "description": agent.get("description", ""),
+                "visualization_config": viz_cfg,
+                "gemini_status": gemini_msg
+            }, ensure_ascii=False, indent=2), language="json")
 
-    status = gr.Textbox(label="Status", interactive=False)
-    df_state = gr.State()
-    agents_state = gr.State()
-
-    agent_dropdown = gr.Dropdown(choices=[], label="Select agent", interactive=True)
-
-    load_btn = gr.Button("Load dataset & agents", variant="primary")
-    viz_btn = gr.Button("Visualize", variant="secondary")
-
-    load_btn.click(
-        run_pipeline,
-        inputs=[api_key, dataset_file, dataset_text, agents_file, agents_text, use_gemini],
-        outputs=[df_state, agents_state, status, agent_dropdown],
-    )
-
-    plot = gr.Plot(label="Visualization")
-    details = gr.Textbox(label="Details", interactive=False)
-
-    viz_btn.click(
-        visualize_selected,
-        inputs=[api_key, agent_dropdown, use_gemini, df_state, agents_state],
-        outputs=[plot, details],
-    )
-
-demo.launch(share=True)
+# Footer
+st.markdown("---")
+st.markdown(f"<div class='wow-sub'>Tips</div>", unsafe_allow_html=True)
+st.markdown(
+    "- Use agents with fields present in your dataset.\n"
+    "- If Gemini is enabled, ensure a valid API key is provided.\n"
+    "- For categorical distributions, pie/bar works best; for numeric distributions, hist/scatter works best."
+)
